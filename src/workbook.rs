@@ -143,7 +143,7 @@ impl Workbook {
     }
 
     pub fn close(&mut self) -> Result<Option<Vec<u8>>> {
-        self.create_files().expect("Create files error!");
+        self.create_files()?;
 
         let mut buf = Vec::new();
         {
@@ -160,7 +160,7 @@ impl Workbook {
         }
 
         if let Some(xlsx_file) = &self.xlsx_file {
-            let mut file = File::create(xlsx_file).unwrap();
+            let mut file = File::create(xlsx_file)?;
             file.write_all(&buf)?;
             self.saved = true;
 
@@ -335,18 +335,20 @@ impl Workbook {
     <Default Extension="bin" ContentType="application/vnd.ms-excel.sheet.binary.macroEnabled.main"/>
     <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
     <Override PartName="/xl/workbook.xml"
-              ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>"#;
+              ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>
+              "#;
         writer.write_all(xml)?;
-        for x in 1..self.sheets.len() {
+        for sf in self.sheets.iter() {
             let wb = format!(
                 "<Override PartName=\"/xl/worksheets/sheet{}.xml\"
                     ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml\"/>",
-                x
+                sf.id
             );
             writer.write_all(wb.as_bytes())?;
         }
 
-        let tail = br#"<Override PartName="/xl/theme/theme1.xml" ContentType="application/vnd.openxmlformats-officedocument.theme+xml"/>
+        let tail = br#"
+    <Override PartName="/xl/theme/theme1.xml" ContentType="application/vnd.openxmlformats-officedocument.theme+xml"/>
     <Override PartName="/xl/styles.xml"
               ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>
     <Override PartName="/xl/sharedStrings.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sharedStrings+xml"/>
